@@ -6,9 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi"
@@ -17,7 +15,7 @@ import (
 
 	"github.com/bootdotdev/learn-cicd-starter/internal/database"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/tursodatabase/libsql-client-go/libsql"
 )
 
 type apiConfig struct {
@@ -40,16 +38,14 @@ func main() {
 
 	apiCfg := apiConfig{}
 
+	// https://github.com/libsql/libsql-client-go/#open-a-connection-to-sqld
+	// libsql://[your-database].turso.io?authToken=[your-auth-token]
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		log.Println("DATABASE_URL environment variable is not set")
 		log.Println("Running without CRUD endpoints")
 	} else {
-		parsedURL, err := addParseTimeParam(dbURL)
-		if err != nil {
-			log.Fatal(err)
-		}
-		db, err := sql.Open("mysql", parsedURL)
+		db, err := sql.Open("libsql", dbURL)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -101,21 +97,4 @@ func main() {
 
 	log.Printf("Serving on port: %s\n", port)
 	log.Fatal(srv.ListenAndServe())
-}
-
-func addParseTimeParam(input string) (string, error) {
-	const dummyScheme = "http://"
-	if !strings.Contains(input, dummyScheme) {
-		input = "http://" + input
-	}
-	u, err := url.Parse(input)
-	if err != nil {
-		return "", err
-	}
-	q := u.Query()
-	q.Add("parseTime", "true")
-	u.RawQuery = q.Encode()
-	returnUrl := u.String()
-	returnUrl = strings.TrimPrefix(returnUrl, dummyScheme)
-	return returnUrl, nil
 }
